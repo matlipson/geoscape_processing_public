@@ -1,0 +1,22 @@
+name: geoscape
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.7
+  - xarray
+  - pandas
+  - numpy
+  - geopandas
+  - shapely
+  - cartopy
+  - rioxarray
+  - ipython
+  - netcdf4
+  - descartes
+  - libpysal
+  - jupyter
+  - seaborn
+  - xlrd
+  - geocube
+prefix: /opt/miniconda3/envs/geoscape
