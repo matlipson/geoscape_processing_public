@@ -57,6 +57,7 @@ the centroid calculation (which applies statistics to a single grid only) with a
 domain = 'sample' # use 'sample' for data available at https://geoscape.com.au/get-sample/
 grid   = 'CCI'
 version = 'v1.01'
+projpath = '.'
 
 # if first run set to True
 do_buildings = True  # process Geoscape Buildings shapefile into a GeoPackage
@@ -1285,9 +1286,7 @@ if __name__ == "__main__":
     ################################################################################
     # path setup
 
-    projpath = '.'
     datapath = f'{projpath}/data'
-
     outpath = f'{projpath}/outputs'   # netcdf/tif outputs
     plotpath = f'{projpath}/figures'  # figures output
 
@@ -1333,6 +1332,10 @@ if __name__ == "__main__":
     raster_hgt_fpath = f'{outpath}/{domain.capitalize()}_geoscape_building_height_rasterised'
 
     ################################################################################
+    if not os.path.exists(tif_fpaths[0]):
+        print(f'ERROR: geoscape tif not found at {tif_fpaths[0]}\n \
+            Try downloading sample from https://geoscape.com.au/get-sample/ and extract into data folder')
+        exit()
 
     ds = main()
 
