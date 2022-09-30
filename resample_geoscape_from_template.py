@@ -56,7 +56,7 @@ the centroid calculation (which applies statistics to a single grid only) with a
 
 domain = 'sample' # use 'sample' for data available at https://geoscape.com.au/get-sample/
 grid   = 'CCI'
-version = 'v1.01'
+version = 'v1.02'
 projpath = '.'
 
 # if first run set to True
@@ -70,6 +70,12 @@ replace_height_with_raster = False # use pre-processed raster for building heigh
 with_30m = False     # use 30 m land cover data as well as 2 m (mismatched)
 
 missing_float = -999.
+
+################################################################################
+# v0.92 : for peer review in Frontiers in Environmental Science
+# v1.0  : for publication in Frontiers in Environmental Science
+# v1.01 : lowveg_fraction seperated into grass_fraction and shrub_fraction
+# v1.02 : more accurate building perimeter calculation using geodesic distance
 
 ################################################################################
 
@@ -99,8 +105,10 @@ def main_create_buildings_geopackage():
     # format individual building information
 
     print('reading Geoscape building shapefile')
-    raw = gpd.read_file(shp_fpath)
-    raw.columns= raw.columns.str.lower()
+    orig = gpd.read_file(shp_fpath)
+
+    raw = orig.copy()
+    raw.columns = orig.columns.str.lower()
 
     if domain == 'melbourne':
         # drop buildings without height info
@@ -111,13 +119,11 @@ def main_create_buildings_geopackage():
         raw['bld_hgt'] = (raw['roof_hgt']+raw['eave_hgt'])/2
         raw['bld_max_hgt'] = raw['roof_hgt']
     
-    buildings = raw[['bld_hgt','bld_max_hgt','geometry']]
+    buildings = raw[['bld_hgt','bld_max_hgt','area','geometry']]
 
-    print('calculating each building area and perimeter')
-    x,y = get_midpoint(buildings)
-    # reproject into metres on equal area cylindrical centred
-    new_proj = buildings['geometry'].to_crs(f'+proj=cea +lat_0={y} +lon_0={x} +units=m')
-    buildings = buildings.assign(area = new_proj.area, perimeter = new_proj.length)
+    print('calculating each building perimeter')
+    buildings['perimeter'] = geodesic_area_and_perimeter(buildings,mode='perim')
+    # buildings['area'] = geodesic_area_and_perimeter(buildings,mode='area')
 
     print('calculating wall area per building')
     buildings['wall_area'] = buildings['perimeter']*buildings['bld_hgt']
@@ -634,6 +640,35 @@ def get_perimeter(geom):
     perim = cgeo.Geodesic().geometry_length(geom_2d)
 
     return perim
+
+def geodesic_area_and_perimeter(geodf,mode='perim'):
+    '''calculate area and perimeter of shapely polygon using geodesic distance
+    See https://gis.stackexchange.com/questions/413349/calculating-area-of-lat-lon-polygons-without-transformation-using-geopandas
+    See https://pyproj4.github.io/pyproj/stable/api/geod.html'''
+    if not geodf.crs and geodf.crs.is_geographic:
+        raise TypeError('geodataframe should have geographic coordinate system')
+
+    geod = geodf.crs.get_geod()
+
+    # not needed
+    def calc_perim(geom):
+        '''use geopandas get_geod to calculate geometry length'''
+        perim = geodf.crs.get_geod().geometry_length(geom)
+        return perim
+
+    def calc_area(geom):
+        '''use geopandas get_geod to calculate geometry perimeter area'''
+        area, perim = geodf.crs.get_geod().geometry_area_perimeter(geom)
+        return abs(area)
+
+    if mode=='perim':
+        print('returning geodesic perimeter (m)')
+        result = geodf.geometry.apply(calc_perim)
+    if mode=='area':
+        print('returning geodesic area (m2)')
+        result = geodf.geometry.apply(calc_area)
+    
+    return result
 
 def calc_all_grids_from_template(buildings,template):
 
