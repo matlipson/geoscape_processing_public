@@ -225,7 +225,7 @@ def main_calculate_morphology(grid):
     tree_ds = tree_orig.rio.reproject('epsg:4326').rename({'y':'latitude','x':'longitude'})
 
     print('loading template for regridding')
-    template = xr.load_dataset(geoscape_outpath)
+    template = xr.open_dataset(geoscape_outpath)
 
     print('regridding tree data')
     tree_gridded = regrid_raster_for_hgt(tree_ds,template,'tree')
